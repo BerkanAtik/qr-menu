@@ -1,7 +1,13 @@
 import { supabase } from '@/lib/supabase'
 import MenuClient from '@/components/MenuClient'
 
-export default async function Home() {
+export default async function MasaMenu({
+  params,
+}: {
+  params: Promise<{ masaNo: string }>
+}) {
+  const { masaNo } = await params
+
   const { data: restaurant } = await supabase
     .from('restaurants')
     .select('*')
@@ -12,37 +18,41 @@ export default async function Home() {
     return <div style={{ padding: 40 }}>Restoran bulunamadı.</div>
   }
 
-  const { data: categories, error: catError } = await supabase
+  // Masa önceden (QR üretimi sırasında) oluşturulmuş olmalı.
+  // Yoksa geçersiz bir masa numarası demektir, otomatik oluşturmuyoruz.
+  const { data: table } = await supabase
+    .from('tables')
+    .select('*')
+    .eq('restaurant_id', restaurant.id)
+    .eq('table_no', parseInt(masaNo))
+    .single()
+
+  if (!table) {
+    return (
+      <div className="min-h-screen bg-[#FAF7F1] flex items-center justify-center px-6">
+        <div className="max-w-sm w-full bg-white rounded-sm border border-[#E5DCCF] shadow-sm p-8 text-center">
+          <h1 className="font-[family-name:var(--font-display)] text-xl text-[#2B2420] mb-2">
+            Masa bulunamadı
+          </h1>
+          <p className="text-[#7A7267] text-sm">
+            Bu QR kod geçerli değil. Lütfen personelden yardım isteyin.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const { data: categories } = await supabase
     .from('categories')
     .select('*')
     .eq('restaurant_id', restaurant.id)
     .order('sort_order', { ascending: true })
 
-  const { data: products, error: prodError } = await supabase
+  const { data: products } = await supabase
     .from('products')
     .select('*')
     .eq('restaurant_id', restaurant.id)
     .eq('is_available', true)
-
-  if (catError || prodError) {
-    return (
-      <div style={{ padding: 40, color: 'red' }}>
-        Hata: {catError?.message || prodError?.message}
-      </div>
-    )
-  }
-
-  const { data: table } = await supabase
-    .from('tables')
-    .select('id, table_no')
-    .eq('restaurant_id', restaurant.id)
-    .order('table_no', { ascending: true })
-    .limit(1)
-    .single()
-
-  if (!table) {
-    return <div style={{ padding: 40 }}>Masa bulunamadı.</div>
-  }
 
   const { data: heroImages } = await supabase
     .from('hero_images')
@@ -57,7 +67,7 @@ export default async function Home() {
       categories={categories || []}
       products={products || []}
       tableId={table.id}
-      tableNo={table.table_no}
+      tableNo={parseInt(masaNo)}
       heroImages={heroImages || []}
       restaurantInfo={{
         wifiPassword: restaurant.wifi_password,
