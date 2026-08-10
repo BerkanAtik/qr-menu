@@ -35,11 +35,6 @@ type RestaurantInfo = {
   allergenInfo: string | null
 }
 
-type CartItem = {
-  product: Product
-  quantity: number
-}
-
 // Şimdilik statik örnek işletme (Petrol Ofisi). Gerçek restoran eklenince
 // admin panelindeki "Bilgiler > Google Yorumlar linki" alanına taşınabilir.
 // !12e1 parametresi Google Maps'te doğrudan "yorum yaz" ekranını açar.
@@ -123,10 +118,10 @@ function CategoryIcon({ name }: { name: string }) {
 }
 
 export default function MenuClient({
-  restaurantId,
   restaurantName,
   categories,
   products,
+  restaurantId,
   tableId,
   tableNo,
   heroImages,
@@ -141,19 +136,19 @@ export default function MenuClient({
   heroImages: HeroImage[]
   restaurantInfo: RestaurantInfo
 }) {
-  const [cart, setCart] = useState<CartItem[]>([])
-  const [submitting, setSubmitting] = useState(false)
-  const [orderSuccess, setOrderSuccess] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [heroIndex, setHeroIndex] = useState(0)
   const [callingService, setCallingService] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [pulsing, setPulsing] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
+  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const catalogRef = useRef<HTMLDivElement | null>(null)
   const categoryScrollRef = useRef<HTMLDivElement | null>(null)
+  const programmaticScroll = useRef(false)
+  const programmaticScrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (heroImages.length <= 1) return
@@ -163,41 +158,26 @@ export default function MenuClient({
     return () => clearInterval(interval)
   }, [heroImages.length])
 
-  function addToCart(product: Product) {
-    setCart((prev) => {
-      const existing = prev.find((item) => item.product.id === product.id)
-      if (existing) {
-        return prev.map((item) =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        )
-      }
-      return [...prev, { product, quantity: 1 }]
-    })
-  }
-
-  function removeFromCart(productId: string) {
-    setCart((prev) => {
-      const existing = prev.find((item) => item.product.id === productId)
-      if (existing && existing.quantity > 1) {
-        return prev.map((item) =>
-          item.product.id === productId
-            ? { ...item, quantity: item.quantity - 1 }
-            : item
-        )
-      }
-      return prev.filter((item) => item.product.id !== productId)
-    })
-  }
-
-  const total = cart.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
-    0
-  )
-  const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0)
+  // Kategoriye tıklanınca kayan otomatik scroll bittikten sonra, kullanıcı
+  // elle (parmakla/tekerlekle) kaydırırsa altın çerçeveyi kaldırır.
+  useEffect(() => {
+    function handleScroll() {
+      if (programmaticScroll.current) return
+      setActiveCategoryId(null)
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   function scrollToCategory(id: string) {
+    setActiveCategoryId(id)
+
+    programmaticScroll.current = true
+    if (programmaticScrollTimeout.current) clearTimeout(programmaticScrollTimeout.current)
+    programmaticScrollTimeout.current = setTimeout(() => {
+      programmaticScroll.current = false
+    }, 1000)
+
     sectionRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
@@ -232,7 +212,7 @@ export default function MenuClient({
       return
     }
 
-    // 3 saniyelik onay: butonda altın halkalar + "Garson Çağrıldı" durumu,
+    // Onay: butonda 3 tam tur altın halka (1.5sn x 3 = 4.5sn) + "Garson Çağrıldı" durumu,
     // telefonda kısa titreşim (PC'de donanım yok, sessizce yok sayılır)
     if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
       navigator.vibrate([25, 40, 25])
@@ -242,94 +222,9 @@ export default function MenuClient({
     setTimeout(() => {
       setPulsing(false)
       setConfirmed(false)
-    }, 3000)
+    }, 4500)
 
     showToast('Talebiniz iletildi')
-  }
-
-  async function submitOrder() {
-    if (cart.length === 0) return
-    setSubmitting(true)
-
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .insert({
-        restaurant_id: restaurantId,
-        table_id: tableId,
-        status: 'pending',
-        total: total,
-      })
-      .select('id')
-      .single()
-
-    if (orderError || !order) {
-      alert('Sipariş oluşturulamadı: ' + orderError?.message)
-      setSubmitting(false)
-      return
-    }
-
-    const orderItems = cart.map((item) => ({
-      order_id: order.id,
-      product_id: item.product.id,
-      quantity: item.quantity,
-      unit_price: item.product.price,
-    }))
-
-    const { error: itemsError } = await supabase
-      .from('order_items')
-      .insert(orderItems)
-
-    if (itemsError) {
-      alert('Sipariş kalemleri eklenemedi: ' + itemsError.message)
-      setSubmitting(false)
-      return
-    }
-
-    // Sipariş kaydedildi, şimdi iyzico ödeme sayfasını başlat
-    const res = await fetch('/api/payment/initialize', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        orderId: order.id,
-        buyerName: restaurantName,
-        buyerEmail: 'misafir@example.com',
-      }),
-    })
-
-    const data = await res.json()
-
-    if (data.error || !data.paymentPageUrl) {
-      alert('Ödeme başlatılamadı: ' + (data.error || 'Bilinmeyen hata'))
-      setSubmitting(false)
-      return
-    }
-
-    // Müşteriyi iyzico'nun ödeme sayfasına yönlendir
-    window.location.assign(data.paymentPageUrl)
-  }
-
-  if (orderSuccess) {
-    return (
-      <div className="min-h-screen bg-[#FAF7F1] flex items-center justify-center px-6">
-        <div className="max-w-sm w-full bg-white rounded-sm border border-[#E5DCCF] shadow-sm p-8 text-center">
-          <div className="w-12 h-12 rounded-full bg-[#7A2E33] text-white flex items-center justify-center mx-auto mb-4 text-xl">
-            ✓
-          </div>
-          <h1 className="font-[family-name:var(--font-display)] text-2xl text-[#2B2420] mb-2">
-            Siparişiniz alındı
-          </h1>
-          <p className="text-[#7A7267] text-sm mb-6">
-            Mutfağa iletildi, hazırlanmaya başlandı.
-          </p>
-          <button
-            onClick={() => setOrderSuccess(false)}
-            className="font-[family-name:var(--font-mono)] text-sm px-5 py-2.5 bg-[#2B2420] text-white rounded-sm hover:bg-[#453b32] transition-colors"
-          >
-            Yeni sipariş ver
-          </button>
-        </div>
-      </div>
-    )
   }
 
   const popularProducts = products.filter((p) => p.is_popular)
@@ -339,10 +234,50 @@ export default function MenuClient({
   const listView = searchResults
 
   return (
-    <div className="min-h-screen bg-[#14100C] pb-28">
+    <div className="min-h-screen w-full max-w-full bg-[#14100C] pb-24">
       <div className="max-w-md md:max-w-3xl lg:max-w-[1440px] mx-auto lg:px-10 xl:px-16">
-      {/* Header — yan rozetler eşit genişlikte sütunlarda, ortadaki blok tam merkezde */}
-      <div className="px-5 pt-6 pb-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+      {/* Header (mobil): logo üstte ortada, rozetler altında yan yana */}
+      <div className="md:hidden px-5 pt-6 pb-5">
+        <div className="flex flex-col items-center mb-3">
+          <div className="w-7 h-7 text-[#C9A876] mb-1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3">
+              <path d="M7 21V13.5C4.5 12.6 3 10.5 3 8a4 4 0 0 1 4-4c.5 0 1 .1 1.4.3A4 4 0 0 1 12 2a4 4 0 0 1 3.6 2.3c.4-.2.9-.3 1.4-.3a4 4 0 0 1 4 4c0 2.5-1.5 4.6-4 5.5V21Z" strokeLinejoin="round" />
+              <path d="M7 17h10" strokeLinecap="round" />
+            </svg>
+          </div>
+          <h1 className="font-[family-name:var(--font-display)] italic text-lg text-[#F5EFE4] text-center leading-tight max-w-full truncate px-1">
+            {restaurantName}
+          </h1>
+          <p className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.15em] uppercase text-[#8A7C68] mt-1">
+            Dijital Menü
+          </p>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <a
+            href={GOOGLE_REVIEW_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#231B14] border border-[#3A2F24] text-[#C9A876]"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 shrink-0">
+              <path d="M12 2.5l2.9 6 6.6.6-5 4.4 1.5 6.5-6-3.6-6 3.6 1.5-6.5-5-4.4 6.6-.6Z" />
+            </svg>
+            <span className="font-[family-name:var(--font-mono)] text-xs">{GOOGLE_RATING}</span>
+          </a>
+          <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#231B14] border border-[#3A2F24] text-[#C9A876]">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-3.5 h-3.5 shrink-0">
+              <path d="M4 17V9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8M2 17h20M6 17v2M18 17v2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="font-[family-name:var(--font-mono)] text-xs">Masa: {tableNo}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Header (masaüstü): tek satır, yan rozetler eşit sütunlarda, logo tam merkezde */}
+      <div
+        className="hidden md:grid px-5 pt-6 pb-5 items-center gap-3"
+        style={{ gridTemplateColumns: 'minmax(0,1fr) auto minmax(0,1fr)' }}
+      >
         <a
           href={GOOGLE_REVIEW_URL}
           target="_blank"
@@ -353,18 +288,17 @@ export default function MenuClient({
             <path d="M12 2.5l2.9 6 6.6.6-5 4.4 1.5 6.5-6-3.6-6 3.6 1.5-6.5-5-4.4 6.6-.6Z" />
           </svg>
           <span className="font-[family-name:var(--font-mono)] text-xs whitespace-nowrap">
-            {GOOGLE_RATING}
-            <span className="hidden sm:inline"> Google&apos;da Puanla</span>
+            {GOOGLE_RATING} Google&apos;da Puanla
           </span>
         </a>
-        <div className="justify-self-center flex flex-col items-center">
+        <div className="justify-self-center min-w-0 max-w-full flex flex-col items-center">
           <div className="w-9 h-9 text-[#C9A876] mb-1.5">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3">
               <path d="M7 21V13.5C4.5 12.6 3 10.5 3 8a4 4 0 0 1 4-4c.5 0 1 .1 1.4.3A4 4 0 0 1 12 2a4 4 0 0 1 3.6 2.3c.4-.2.9-.3 1.4-.3a4 4 0 0 1 4 4c0 2.5-1.5 4.6-4 5.5V21Z" strokeLinejoin="round" />
               <path d="M7 17h10" strokeLinecap="round" />
             </svg>
           </div>
-          <h1 className="font-[family-name:var(--font-display)] italic text-xl text-[#F5EFE4] text-center leading-tight">
+          <h1 className="font-[family-name:var(--font-display)] italic text-xl text-[#F5EFE4] text-center leading-tight max-w-full truncate px-1">
             {restaurantName}
           </h1>
           <p className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.2em] uppercase text-[#8A7C68] mt-1">
@@ -439,22 +373,16 @@ export default function MenuClient({
       </div>
 
       {listView ? (
-        <div className="px-5">
+        <div className="px-4 md:px-5">
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs text-[#8A7C68]">{listView.length} sonuç</p>
           </div>
           {listView.length === 0 && (
             <p className="text-[#8A7C68] text-sm">Sonuç bulunamadı.</p>
           )}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 md:gap-x-8 gap-y-1">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-2.5 md:gap-x-8 gap-y-1">
             {listView.map((product) => (
-              <ProductRow
-                key={product.id}
-                product={product}
-                cartItem={cart.find((item) => item.product.id === product.id)}
-                onAdd={() => addToCart(product)}
-                onRemove={() => removeFromCart(product.id)}
-              />
+              <ProductRow key={product.id} product={product} />
             ))}
           </div>
         </div>
@@ -474,7 +402,7 @@ export default function MenuClient({
 
             <div
               ref={categoryScrollRef}
-              className="flex-1 min-w-0 flex gap-3 overflow-x-auto scroll-smooth no-scrollbar"
+              className="flex-1 w-0 min-w-0 flex gap-3 overflow-x-auto scroll-smooth no-scrollbar"
             >
               {categories.map((category) => {
                 const { emoji, label } = splitCategoryName(category.name)
@@ -482,7 +410,11 @@ export default function MenuClient({
                   <button
                     key={category.id}
                     onClick={() => scrollToCategory(category.id)}
-                    className="shrink-0 flex flex-col items-center justify-center gap-2 min-w-[6.5rem] px-4 py-4 rounded-xl border border-[#3A2F24] text-[#C9A876] hover:border-[#C9A876] transition-colors"
+                    className={`shrink-0 flex flex-col items-center justify-center gap-2 min-w-[6.5rem] px-4 py-4 rounded-xl border text-[#C9A876] transition-colors hover:border-[#C9A876] ${
+                      activeCategoryId === category.id
+                        ? 'border-[#C9A876] bg-[#231B14]'
+                        : 'border-[#3A2F24]'
+                    }`}
                   >
                     {emoji ? (
                       <span className="text-3xl leading-none">{emoji}</span>
@@ -518,20 +450,14 @@ export default function MenuClient({
               </div>
               <div className="flex gap-4 overflow-x-auto px-5 pb-1 md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:overflow-visible">
                 {popularProducts.map((product) => (
-                  <PopularCard
-                    key={product.id}
-                    product={product}
-                    cartItem={cart.find((item) => item.product.id === product.id)}
-                    onAdd={() => addToCart(product)}
-                    onRemove={() => removeFromCart(product.id)}
-                  />
+                  <PopularCard key={product.id} product={product} />
                 ))}
               </div>
             </div>
           )}
 
           {/* Full catalog */}
-          <div ref={catalogRef} className="px-5">
+          <div ref={catalogRef} className="px-4 md:px-5 pt-10 md:pt-7">
             {categories.map((category) => {
               const categoryProducts = products.filter(
                 (p) => p.category_id === category.id
@@ -549,15 +475,9 @@ export default function MenuClient({
                   </h2>
                   <div className="h-px w-10 bg-[#C9A876] mb-3" />
 
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 md:gap-x-8 gap-y-1">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-2.5 md:gap-x-8 gap-y-1">
                     {categoryProducts.map((product) => (
-                      <ProductRow
-                        key={product.id}
-                        product={product}
-                        cartItem={cart.find((item) => item.product.id === product.id)}
-                        onAdd={() => addToCart(product)}
-                        onRemove={() => removeFromCart(product.id)}
-                      />
+                      <ProductRow key={product.id} product={product} />
                     ))}
                   </div>
                 </div>
@@ -567,41 +487,6 @@ export default function MenuClient({
         </>
       )}
       </div>
-
-      {/* Cart bar */}
-      {cart.length > 0 && (
-        <div className="fixed bottom-4 left-0 right-0 z-20 px-4">
-          <div className="max-w-md mx-auto bg-[#1E1811] border border-[#3A2F24] rounded-full pl-2 pr-2.5 py-2 flex items-center justify-between shadow-xl">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#C9A876] text-[#1B2318] flex items-center justify-center relative shrink-0">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-5 h-5">
-                  <path d="M6 6h15l-1.5 9h-12L6 6Zm0 0-1-3H2" strokeLinecap="round" strokeLinejoin="round" />
-                  <circle cx="9" cy="20" r="1" />
-                  <circle cx="18" cy="20" r="1" />
-                </svg>
-                <span className="absolute -top-1 -right-1 w-4.5 h-4.5 rounded-full bg-[#7A2E33] text-white text-[10px] flex items-center justify-center">
-                  {itemCount}
-                </span>
-              </div>
-              <div>
-                <div className="font-[family-name:var(--font-mono)] text-[10px] text-[#8A7C68] uppercase tracking-wider">
-                  Sepetiniz · {itemCount} ürün
-                </div>
-                <div className="font-[family-name:var(--font-mono)] text-[#F5EFE4] text-sm">
-                  {total.toFixed(2)} ₺
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={submitOrder}
-              disabled={submitting}
-              className="font-[family-name:var(--font-mono)] text-sm px-5 py-2.5 bg-[#C9A876] text-[#1B2318] rounded-full hover:bg-[#d9bb8e] transition-colors disabled:opacity-60 font-medium"
-            >
-              {submitting ? 'Gönderiliyor…' : 'Siparişi Ver'}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Ekran ortasında bildirim */}
       {toast && (
@@ -619,10 +504,8 @@ export default function MenuClient({
         </div>
       )}
 
-      {/* Sabit garson çağırma butonu — her sayfada, her zaman sağ altta */}
-      <div
-        className={`fixed right-5 z-30 ${cart.length > 0 ? 'bottom-24 md:bottom-6' : 'bottom-6'}`}
-      >
+      {/* Sabit garson çağırma butonu — mobilde ortada, webde sağda (köşeye yapışık değil) */}
+      <div className="fixed bottom-5 md:bottom-8 left-1/2 -translate-x-1/2 md:left-auto md:right-24 md:translate-x-0 z-30">
         {/* Dışa yayılan altın halkalar */}
         {pulsing && (
           <span className="absolute inset-0 pointer-events-none">
@@ -635,7 +518,7 @@ export default function MenuClient({
         <button
           onClick={() => callService('garson')}
           disabled={callingService || confirmed}
-          className={`relative flex items-center gap-2.5 pl-4.5 pr-5.5 py-4 rounded-full font-[family-name:var(--font-display)] text-base md:text-lg font-semibold tracking-wide shadow-xl transition-colors duration-300 disabled:cursor-default ${
+          className={`relative flex items-center gap-2 pl-4 pr-4.5 py-3 rounded-full font-[family-name:var(--font-display)] text-sm md:text-base font-semibold tracking-wide shadow-xl transition-colors duration-300 disabled:cursor-default whitespace-nowrap ${
             confirmed
               ? 'bg-[#E9C98F] text-[#1B2318]'
               : 'bg-[#C9A876] text-[#1B2318] hover:bg-[#d9bb8e]'
@@ -649,12 +532,12 @@ export default function MenuClient({
               fill="none"
               stroke="currentColor"
               strokeWidth="2.6"
-              className="w-6 h-6 md:w-7 md:h-7 animate-garson-check"
+              className="w-5 h-5 md:w-6 md:h-6 animate-garson-check"
             >
               <path d="M5 12.5l4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           ) : (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="w-6 h-6 md:w-7 md:h-7">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="w-5 h-5 md:w-6 md:h-6">
               <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M13.7 21a2 2 0 0 1-3.4 0" strokeLinecap="round" />
             </svg>
@@ -666,17 +549,7 @@ export default function MenuClient({
   )
 }
 
-function PopularCard({
-  product,
-  cartItem,
-  onAdd,
-  onRemove,
-}: {
-  product: Product
-  cartItem: CartItem | undefined
-  onAdd: () => void
-  onRemove: () => void
-}) {
+function PopularCard({ product }: { product: Product }) {
   return (
     <div className="shrink-0 w-44 md:w-full bg-[#1E1811] border border-[#2A2119] rounded-xl overflow-hidden">
       <div className="relative w-full h-36">
@@ -693,94 +566,36 @@ function PopularCard({
         {product.description && (
           <div className="text-[#8A7C68] text-sm mb-2.5 line-clamp-1">{product.description}</div>
         )}
-        <div className="flex items-center justify-between">
-          <span className="font-[family-name:var(--font-mono)] text-[#C9A876] text-sm">
-            {product.price.toFixed(2)} ₺
-          </span>
-          <div className="flex items-center gap-2">
-            {cartItem && (
-              <>
-                <button
-                  onClick={onRemove}
-                  aria-label="Azalt"
-                  className="w-7 h-7 rounded-full border border-[#3A2F24] text-[#D8CBB8] flex items-center justify-center text-sm"
-                >
-                  −
-                </button>
-                <span className="font-[family-name:var(--font-mono)] text-sm text-[#F5EFE4] w-3 text-center">
-                  {cartItem.quantity}
-                </span>
-              </>
-            )}
-            <button
-              onClick={onAdd}
-              aria-label="Sepete ekle"
-              className="w-7 h-7 rounded-full bg-[#C9A876] text-[#1B2318] flex items-center justify-center text-sm"
-            >
-              +
-            </button>
-          </div>
-        </div>
+        <span className="font-[family-name:var(--font-mono)] text-[#C9A876] text-sm">
+          {product.price.toFixed(2)} ₺
+        </span>
       </div>
     </div>
   )
 }
 
-function ProductRow({
-  product,
-  cartItem,
-  onAdd,
-  onRemove,
-}: {
-  product: Product
-  cartItem: CartItem | undefined
-  onAdd: () => void
-  onRemove: () => void
-}) {
+function ProductRow({ product }: { product: Product }) {
   return (
-    <div className="flex items-start gap-3.5 py-5 border-b border-[#2A2119] last:border-0">
+    <div className="flex items-start gap-2.5 md:gap-3.5 py-4 md:py-5 border-b border-[#2A2119] last:border-0 min-w-0">
       {product.image_url ? (
         <Image
           src={product.image_url}
           alt={product.name}
           width={88}
           height={88}
-          className="w-20 h-20 md:w-[5.5rem] md:h-[5.5rem] object-cover rounded-lg shrink-0"
+          className="w-14 h-14 md:w-[5.5rem] md:h-[5.5rem] object-cover rounded-lg shrink-0"
         />
       ) : (
-        <div className="w-20 h-20 md:w-[5.5rem] md:h-[5.5rem] rounded-lg bg-[#1E1811] border border-[#2A2119] shrink-0" />
+        <div className="w-14 h-14 md:w-[5.5rem] md:h-[5.5rem] rounded-lg bg-[#1E1811] border border-[#2A2119] shrink-0" />
       )}
       <div className="flex-1 min-w-0">
-        <div className="text-[#F5EFE4] font-semibold text-base leading-tight">{product.name}</div>
+        <div className="text-[#F5EFE4] font-semibold text-sm md:text-base leading-tight">{product.name}</div>
         {product.description && (
-          <div className="text-[#8A7C68] text-sm mt-1 line-clamp-2">{product.description}</div>
+          <div className="text-[#8A7C68] text-xs md:text-sm mt-1 line-clamp-2">{product.description}</div>
         )}
-        <div className="font-[family-name:var(--font-mono)] text-[#C9A876] text-sm mt-2">
+        <div className="font-[family-name:var(--font-mono)] text-[#C9A876] text-xs md:text-sm mt-1.5 md:mt-2">
           {product.price.toFixed(2)} ₺
         </div>
-      </div>
-      <div className="flex flex-col items-center gap-1.5 shrink-0 pt-1">
-        <button
-          onClick={onAdd}
-          className="w-8 h-8 rounded-full bg-[#C9A876] text-[#1B2318] flex items-center justify-center hover:bg-[#d9bb8e] transition-colors text-base"
-          aria-label="Sepete ekle"
-        >
-          +
-        </button>
-        {cartItem && (
-          <>
-            <span className="font-[family-name:var(--font-mono)] text-sm text-[#F5EFE4]">
-              {cartItem.quantity}
-            </span>
-            <button
-              onClick={onRemove}
-              className="w-8 h-8 rounded-full border border-[#3A2F24] text-[#D8CBB8] flex items-center justify-center hover:border-[#C9A876] transition-colors text-base"
-              aria-label="Azalt"
-            >
-              −
-            </button>
-          </>
-        )}
       </div>
     </div>
   )

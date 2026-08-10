@@ -19,6 +19,11 @@
   }
 }
 
+html {
+  /* Genişleyen halka animasyonu gibi taşan öğeler sayfayı yatay kaydırmasın */
+  overflow-x: hidden;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

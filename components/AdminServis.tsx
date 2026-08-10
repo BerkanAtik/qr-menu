@@ -39,6 +39,7 @@ export default function AdminServis({
   useEffect(() => {
     // RLS altında sunucu tarafındaki ilk yükleme (oturumsuz) boş dönebilir;
     // tarayıcıdaki oturumlu client ile mount anında tazeliyoruz.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- oturumlu ilk veri çekimi
     refreshRequests()
 
     const channel = supabase
