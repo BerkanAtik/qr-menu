@@ -69,15 +69,6 @@ export default async function MasaMenu({
       tableId={table.id}
       tableNo={parseInt(masaNo)}
       heroImages={heroImages || []}
-      restaurantInfo={{
-        wifiPassword: restaurant.wifi_password,
-        workingHours: restaurant.working_hours,
-        address: restaurant.address,
-        googleReviewsUrl: restaurant.google_reviews_url,
-        instagramHandle: restaurant.instagram_handle,
-        aboutText: restaurant.about_text,
-        allergenInfo: restaurant.allergen_info,
-      }}
     />
   )
 }

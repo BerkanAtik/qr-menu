@@ -25,16 +25,6 @@ type HeroImage = {
   image_url: string
 }
 
-type RestaurantInfo = {
-  wifiPassword: string | null
-  workingHours: string | null
-  address: string | null
-  googleReviewsUrl: string | null
-  instagramHandle: string | null
-  aboutText: string | null
-  allergenInfo: string | null
-}
-
 // Şimdilik statik örnek işletme (Petrol Ofisi). Gerçek restoran eklenince
 // admin panelindeki "Bilgiler > Google Yorumlar linki" alanına taşınabilir.
 // !12e1 parametresi Google Maps'te doğrudan "yorum yaz" ekranını açar.
@@ -125,7 +115,6 @@ export default function MenuClient({
   tableId,
   tableNo,
   heroImages,
-  // restaurantInfo şu an kullanılmıyor (hamburger menü/çekmece kaldırıldı, restoran bilgileri henüz yok) — prop sözleşmesi kalsın, ileride drawer geri gelirse hazır olsun
 }: {
   restaurantId: string
   restaurantName: string
@@ -134,7 +123,6 @@ export default function MenuClient({
   tableId: string
   tableNo: number
   heroImages: HeroImage[]
-  restaurantInfo: RestaurantInfo
 }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [heroIndex, setHeroIndex] = useState(0)
