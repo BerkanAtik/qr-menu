@@ -1,37 +1,58 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { supabaseServer } from '@/lib/supabaseServer'
-import AdminQR from '@/components/AdminQR'
+import { useRestaurant } from '@/lib/restaurantContext'
+import AdminQR, { type Masa } from '@/components/AdminQR'
 
-const TOPLAM_MASA = 12
+export default function QRPage() {
+  const restaurant = useRestaurant()
+  const [tables, setTables] = useState<Masa[] | null>(null)
+  const [hata, setHata] = useState<string | null>(null)
 
-export default async function QRPage() {
-  const { data: restaurant } = await supabase
-    .from('restaurants')
-    .select('*')
-    .eq('slug', 'test-restoran')
-    .single()
+  // Sadece var olan masaları okur, eksikleri OTOMATİK tamamlamaz — bunu
+  // önceden yapıyorduk ama bu, "Tümünü sil" ile silinen masaların sayfa her
+  // yenilendiğinde sessizce geri gelmesine sebep oluyordu. Masa oluşturma
+  // artık tamamen AdminQR içindeki "Tek masa ekle" / "Tümünü yenile"
+  // butonlarıyla, kullanıcının elinde.
+  useEffect(() => {
+    let iptal = false
 
-  if (!restaurant) {
-    return <div className="text-[#F5EFE4] p-8">Restoran bulunamadı.</div>
+    async function masalariGetir() {
+      const { data, error } = await supabase
+        .from('tables')
+        .select('id, table_no')
+        .eq('restaurant_id', restaurant.id)
+        .order('table_no', { ascending: true })
+
+      if (error) {
+        if (!iptal) setHata('Masalar okunamadı: ' + error.message)
+        return
+      }
+
+      if (!iptal) setTables(data || [])
+    }
+
+    masalariGetir()
+    return () => {
+      iptal = true
+    }
+  }, [restaurant.id])
+
+  if (hata) {
+    return <p className="text-red-400 text-base">{hata}</p>
   }
 
-  // 1'den 15'e kadar masaları kontrol et, eksik olanları oluştur
-  const { data: existingTables } = await supabase
-    .from('tables')
-    .select('table_no')
-    .eq('restaurant_id', restaurant.id)
-
-  const existingNos = new Set((existingTables || []).map((t) => t.table_no))
-  const missing = []
-  for (let i = 1; i <= TOPLAM_MASA; i++) {
-    if (!existingNos.has(i)) missing.push({ restaurant_id: restaurant.id, table_no: i })
+  if (!tables) {
+    return <p className="text-[#8A7C68] text-sm">Masalar yükleniyor…</p>
   }
 
-  if (missing.length > 0) {
-    // Masa oluşturma RLS altında admin-only bir yazma işlemi; bu sunucu bileşeninde
-    // oturum bilgisi olmadığı için service role client ile yapılır.
-    await supabaseServer.from('tables').insert(missing)
-  }
-
-  return <AdminQR totalTables={TOPLAM_MASA} />
+  return (
+    <AdminQR
+      restaurantId={restaurant.id}
+      slug={restaurant.slug}
+      tableCount={restaurant.table_count}
+      initialTables={tables}
+    />
+  )
 }

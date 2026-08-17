@@ -1,33 +1,46 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import AdminProducts from '@/components/AdminProducts'
+import { useRestaurant } from '@/lib/restaurantContext'
+import AdminProducts, { type Category, type Product } from '@/components/AdminProducts'
 
-export default async function AdminHome() {
-  const { data: restaurant } = await supabase
-    .from('restaurants')
-    .select('*')
-    .eq('slug', 'test-restoran')
-    .single()
+export default function AdminHome() {
+  const restaurant = useRestaurant()
+  const [veri, setVeri] = useState<{ categories: Category[]; products: Product[] } | null>(null)
 
-  if (!restaurant) {
-    return <div className="text-[#F5EFE4] p-8">Restoran bulunamadı.</div>
+  useEffect(() => {
+    let iptal = false
+
+    async function yukle() {
+      const [{ data: categories }, { data: products }] = await Promise.all([
+        supabase
+          .from('categories')
+          .select('*')
+          .eq('restaurant_id', restaurant.id)
+          .order('sort_order', { ascending: true }),
+        supabase.from('products').select('*').eq('restaurant_id', restaurant.id),
+      ])
+
+      if (iptal) return
+      setVeri({ categories: categories || [], products: products || [] })
+    }
+
+    yukle()
+    return () => {
+      iptal = true
+    }
+  }, [restaurant.id])
+
+  if (!veri) {
+    return <p className="text-[#8A7C68] text-sm">Yükleniyor…</p>
   }
-
-  const { data: categories } = await supabase
-    .from('categories')
-    .select('*')
-    .eq('restaurant_id', restaurant.id)
-    .order('sort_order', { ascending: true })
-
-  const { data: products } = await supabase
-    .from('products')
-    .select('*')
-    .eq('restaurant_id', restaurant.id)
 
   return (
     <AdminProducts
       restaurantId={restaurant.id}
-      initialCategories={categories || []}
-      initialProducts={products || []}
+      initialCategories={veri.categories}
+      initialProducts={veri.products}
     />
   )
 }

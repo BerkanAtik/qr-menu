@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Kapmenü — QR Kodlu Dijital Menü Sistemi
 
-## Getting Started
+Restoranlar için çok kiracılı (multi-tenant) QR menü platformu. Müşteri masadaki
+QR kodu okutup menüyü görür ve garson çağırır; restoran sahibi kendi panelinden
+menüsünü yönetir.
 
-First, run the development server:
+Dijital sipariş, sepet veya ödeme **yoktur** — sipariş sözlü olarak garsona
+verilir.
+
+## Adres yapısı
+
+| Adres | İçerik |
+| --- | --- |
+| `/` | Tanıtım ve paket/fiyat sayfası |
+| `/admin` | Restoran sahibi paneli (ürün, görsel, bilgi, QR, servis) |
+| `/superadmin` | Platform sahibi paneli (restoran açma, şifre sıfırlama) |
+| `/[slug]/masa/[masaNo]` | Bir restoranın müşteri menüsü |
+
+## Teknolojiler
+
+- Next.js 16 (App Router) + TypeScript
+- Tailwind CSS 4
+- Supabase (PostgreSQL, Auth, Storage, Realtime)
+- `qrcode` — masaya özel QR üretimi
+
+## Kurulum
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Proje kökünde `.env.local` dosyası oluşturun:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+NEXT_PUBLIC_SUPABASE_URL=https://<proje>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
+SUPABASE_SERVICE_ROLE_KEY=<service role key>
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`SUPABASE_SERVICE_ROLE_KEY` RLS'i tamamen atlar; yalnızca sunucuda
+(`app/api/superadmin/*`) kullanılır ve asla istemciye gönderilmez.
 
-## Learn More
+Veritabanını hazırlamak için `supabase/migrations/` altındaki SQL dosyalarını
+numara sırasına göre Supabase SQL editöründe çalıştırın.
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run dev     # geliştirme sunucusu
+npm run build   # üretim derlemesi
+npm run lint    # ESLint
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Güvenlik
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Tüm tablolarda Row Level Security açıktır:
 
-## Deploy on Vercel
+- Menü verileri (restoran, kategori, ürün, masa, görsel) herkese açık okunur.
+- Yazma yetkisi yalnızca o restorana bağlı kullanıcıdadır —
+  `is_restaurant_admin(restaurant_id)` fonksiyonu üzerinden kontrol edilir.
+- Servis talebini müşteri oturumsuz oluşturabilir; okuma ve kapatma yalnızca
+  restoran sahibine açıktır.
+- Storage'da dosya yolunun ilk klasörü `restaurant_id` olmalıdır; yükleme ve
+  silme izni buna bakar.
+- Süper admin uçları `platform_admins` tablosundaki kayda göre doğrulanır.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Ayrıntılı proje notları için `CLAUDE.md`, veritabanı geçmişi için
+`supabase/migrations/README.md` dosyalarına bakın.

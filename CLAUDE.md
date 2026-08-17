@@ -10,6 +10,12 @@ taleplerini "Tamamlandı" olarak işaretler.
 
 Akış: Masa QR kodu → Müşteri menü arayüzü (gez/ara/garson çağır) → Personel paneli → Servis talebini kapat
 
+Sistem çok restoranlı (SaaS): tek domain üzerinde yol tabanlı adresleme.
+- `/` → tanıtım/satış sayfası
+- `/admin` → restoran sahibi paneli (hangi restoran olduğu giriş yapan
+  kullanıcıdan çözülür, kodda sabit slug YOK)
+- `/[slug]/masa/[masaNo]` → o restoranın müşteri menüsü
+
 - Supabase (PostgreSQL + Auth), şema geçmişi: `supabase/migrations/`
 - Arayüz dili: Türkçe (çoklu dil planı yok)
 
@@ -25,12 +31,21 @@ Akış: Masa QR kodu → Müşteri menü arayüzü (gez/ara/garson çağır) →
 Şema geçmişi `supabase/migrations/` klasöründe (her dosya sırayla Supabase SQL
 editöründe çalıştırılmış bir adım, numara sırasına göre kronolojik — yeni bir
 migration eklenecekse bir sonraki numarayla yeni dosya oluşturulur). Tablolar
-`restaurant_id` ile izole (multi-tenant
-SaaS hazırlığı, şu an tek restoranla test aşamasındayız: `test-restoran`).
+`restaurant_id` ile izole.
+
+Kullanıcı ↔ restoran bağlantısı `restaurant_users` tablosunda tutulur;
+`is_restaurant_admin(restaurant_id)` SQL fonksiyonu bütün RLS politikalarında
+yetki kontrolü için kullanılır.
+
 RLS aktif: menü verileri (ürün/kategori/masa/görsel/restoran) herkese açık
-okunur, yazma ve servis talebi okuma sadece giriş yapmış admin'e açık.
-Sunucu-taraflı güvenilir işlemler (`lib/supabaseServer.ts`) RLS'i atlayan
-service role key kullanır.
+okunur; yazma ve servis talebi okuma SADECE o restoranın sahibine açık
+(giriş yapmış olmak yetmez). Servis talebi eklemeyi müşteri oturumsuz yapar.
+Storage'da dosya yolunun ilk klasörü `restaurant_id` olmalı — yükleme/silme
+izni buna bakar.
+
+`lib/supabaseServer.ts` (service role, RLS'i atlar) şu an kullanılmıyor;
+yeni restoran/kullanıcı açma (müşteri kurulumu) için ayrılmış durumda.
+Asla `'use client'` dosyasına import edilmez.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

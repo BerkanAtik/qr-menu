@@ -1,33 +1,16 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 html {
   /* Genişleyen halka animasyonu gibi taşan öğeler sayfayı yatay kaydırmasın */
   overflow-x: hidden;
 }
 
+/* Sayfaların kendi arka planı var; buradaki koyu zemin yalnızca kenarlarda
+   (mobil "overscroll" esnemesi gibi) beyaz boşluk görünmesini engelliyor.
+   Yazı tipi app/layout.tsx'te --font-body üzerinden atanıyor. */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #14100c;
+  color: #f5efe4;
 }
 
 /* Kaydırılabilir şeritlerde scrollbar'ı görsel olarak gizler (kaydırma özelliği kalır) */

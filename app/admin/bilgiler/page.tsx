@@ -1,16 +1,10 @@
-import { supabase } from '@/lib/supabase'
+'use client'
+
+import { useRestaurant } from '@/lib/restaurantContext'
 import AdminRestaurantInfo from '@/components/AdminRestaurantInfo'
 
-export default async function BilgilerPage() {
-  const { data: restaurant } = await supabase
-    .from('restaurants')
-    .select('*')
-    .eq('slug', 'test-restoran')
-    .single()
-
-  if (!restaurant) {
-    return <div className="text-[#F5EFE4] p-8">Restoran bulunamadı.</div>
-  }
+export default function BilgilerPage() {
+  const restaurant = useRestaurant()
 
   return <AdminRestaurantInfo restaurant={restaurant} />
 }

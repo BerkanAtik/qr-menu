@@ -28,10 +28,10 @@ export default function AdminLogin() {
   }
 
   return (
-    <div className="min-h-screen bg-[#14100C] flex items-center justify-center px-6">
+    <div className="min-h-screen bg-[#14100C] flex items-center justify-center px-4 sm:px-6 py-10">
       <form
         onSubmit={handleLogin}
-        className="max-w-md w-full bg-[#1E1811] rounded-2xl border border-[#2A2119] shadow-xl p-10"
+        className="max-w-md w-full bg-[#1E1811] rounded-2xl border border-[#2A2119] shadow-xl p-6 sm:p-10"
       >
         <div className="flex flex-col items-center mb-8">
           <div className="w-11 h-11 text-[#C9A876] mb-4">

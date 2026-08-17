@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 
-type HeroImage = {
+export type HeroImage = {
   id: string
   image_url: string
   sort_order: number
@@ -100,7 +100,7 @@ export default function AdminHero({
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
-        <h1 className="font-[family-name:var(--font-display)] italic text-3xl text-[#F5EFE4]">
+        <h1 className="font-[family-name:var(--font-display)] italic text-2xl sm:text-3xl text-[#F5EFE4]">
           Görseller
         </h1>
       </div>
@@ -126,14 +126,20 @@ export default function AdminHero({
         <p className="text-[#8A7C68] text-base">Henüz görsel eklenmedi.</p>
       )}
 
-      <div className="grid grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {sortedImages.map((image, idx) => (
           <div
             key={image.id}
             className="bg-[#1E1811] border border-[#2A2119] rounded-2xl overflow-hidden"
           >
             <div className="relative w-full h-44">
-              <Image src={image.image_url} alt="Hero görseli" fill sizes="260px" className="object-cover" />
+              <Image
+                src={image.image_url}
+                alt="Hero görseli"
+                fill
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 260px"
+                className="object-cover"
+              />
             </div>
             <div className="flex items-center justify-between px-4 py-3">
               <div className="flex gap-1.5">

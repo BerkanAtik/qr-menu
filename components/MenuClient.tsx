@@ -25,13 +25,6 @@ type HeroImage = {
   image_url: string
 }
 
-// Şimdilik statik örnek işletme (Petrol Ofisi). Gerçek restoran eklenince
-// admin panelindeki "Bilgiler > Google Yorumlar linki" alanına taşınabilir.
-// !12e1 parametresi Google Maps'te doğrudan "yorum yaz" ekranını açar.
-const GOOGLE_RATING = '4.7'
-const GOOGLE_REVIEW_URL =
-  'https://www.google.com/maps/place//data=!4m3!3m2!1s0x152a6fe30b0afcd9:0xe155bf8e6e5266c3!12e1'
-
 function normalize(text: string) {
   return text.toLocaleLowerCase('tr-TR')
 }
@@ -115,6 +108,8 @@ export default function MenuClient({
   tableId,
   tableNo,
   heroImages,
+  googleRating,
+  googleReviewsUrl,
 }: {
   restaurantId: string
   restaurantName: string
@@ -123,7 +118,11 @@ export default function MenuClient({
   tableId: string
   tableNo: number
   heroImages: HeroImage[]
+  googleRating: number | null
+  googleReviewsUrl: string | null
 }) {
+  // Google rozeti yalnızca restoran "Bilgiler" sayfasından link girdiyse görünür.
+  const googleGoster = Boolean(googleReviewsUrl)
   const [searchQuery, setSearchQuery] = useState('')
   const [heroIndex, setHeroIndex] = useState(0)
   const [callingService, setCallingService] = useState(false)
@@ -133,7 +132,6 @@ export default function MenuClient({
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({})
-  const catalogRef = useRef<HTMLDivElement | null>(null)
   const categoryScrollRef = useRef<HTMLDivElement | null>(null)
   const programmaticScroll = useRef(false)
   const programmaticScrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -216,10 +214,10 @@ export default function MenuClient({
   }
 
   const popularProducts = products.filter((p) => p.is_popular)
+  // Arama kutusu doluysa kategori görünümü yerine düz sonuç listesi gösterilir.
   const searchResults = searchQuery.trim()
     ? products.filter((p) => normalize(p.name).includes(normalize(searchQuery)))
     : null
-  const listView = searchResults
 
   return (
     <div className="min-h-screen w-full max-w-full bg-[#14100C] pb-24">
@@ -240,18 +238,26 @@ export default function MenuClient({
             Dijital Menü
           </p>
         </div>
-        <div className="flex items-center justify-between gap-2">
-          <a
-            href={GOOGLE_REVIEW_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#231B14] border border-[#3A2F24] text-[#C9A876]"
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 shrink-0">
-              <path d="M12 2.5l2.9 6 6.6.6-5 4.4 1.5 6.5-6-3.6-6 3.6 1.5-6.5-5-4.4 6.6-.6Z" />
-            </svg>
-            <span className="font-[family-name:var(--font-mono)] text-xs">{GOOGLE_RATING}</span>
-          </a>
+        <div
+          className={`flex items-center gap-2 ${
+            googleGoster ? 'justify-between' : 'justify-center'
+          }`}
+        >
+          {googleGoster && (
+            <a
+              href={googleReviewsUrl!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#231B14] border border-[#3A2F24] text-[#C9A876]"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 shrink-0">
+                <path d="M12 2.5l2.9 6 6.6.6-5 4.4 1.5 6.5-6-3.6-6 3.6 1.5-6.5-5-4.4 6.6-.6Z" />
+              </svg>
+              {googleRating !== null && (
+                <span className="font-[family-name:var(--font-mono)] text-xs">{googleRating}</span>
+              )}
+            </a>
+          )}
           <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#231B14] border border-[#3A2F24] text-[#C9A876]">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-3.5 h-3.5 shrink-0">
               <path d="M4 17V9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8M2 17h20M6 17v2M18 17v2" strokeLinecap="round" strokeLinejoin="round" />
@@ -266,19 +272,24 @@ export default function MenuClient({
         className="hidden md:grid px-5 pt-6 pb-5 items-center gap-3"
         style={{ gridTemplateColumns: 'minmax(0,1fr) auto minmax(0,1fr)' }}
       >
-        <a
-          href={GOOGLE_REVIEW_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="justify-self-start min-w-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#231B14] border border-[#3A2F24] text-[#C9A876] hover:border-[#C9A876] transition-colors"
-        >
-          <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 shrink-0">
-            <path d="M12 2.5l2.9 6 6.6.6-5 4.4 1.5 6.5-6-3.6-6 3.6 1.5-6.5-5-4.4 6.6-.6Z" />
-          </svg>
-          <span className="font-[family-name:var(--font-mono)] text-xs whitespace-nowrap">
-            {GOOGLE_RATING} Google&apos;da Puanla
-          </span>
-        </a>
+        {googleGoster ? (
+          <a
+            href={googleReviewsUrl!}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="justify-self-start min-w-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#231B14] border border-[#3A2F24] text-[#C9A876] hover:border-[#C9A876] transition-colors"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 shrink-0">
+              <path d="M12 2.5l2.9 6 6.6.6-5 4.4 1.5 6.5-6-3.6-6 3.6 1.5-6.5-5-4.4 6.6-.6Z" />
+            </svg>
+            <span className="font-[family-name:var(--font-mono)] text-xs whitespace-nowrap">
+              {googleRating !== null ? `${googleRating} ` : ''}Google&apos;da Puanla
+            </span>
+          </a>
+        ) : (
+          /* Rozet yoksa da logo ortada kalsın diye boş sütun */
+          <div />
+        )}
         <div className="justify-self-center min-w-0 max-w-full flex flex-col items-center">
           <div className="w-9 h-9 text-[#C9A876] mb-1.5">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3">
@@ -360,16 +371,16 @@ export default function MenuClient({
         </div>
       </div>
 
-      {listView ? (
+      {searchResults ? (
         <div className="px-4 md:px-5">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs text-[#8A7C68]">{listView.length} sonuç</p>
+            <p className="text-xs text-[#8A7C68]">{searchResults.length} sonuç</p>
           </div>
-          {listView.length === 0 && (
+          {searchResults.length === 0 && (
             <p className="text-[#8A7C68] text-sm">Sonuç bulunamadı.</p>
           )}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-x-2.5 md:gap-x-8 gap-y-1">
-            {listView.map((product) => (
+            {searchResults.map((product) => (
               <ProductRow key={product.id} product={product} />
             ))}
           </div>
@@ -445,7 +456,7 @@ export default function MenuClient({
           )}
 
           {/* Full catalog */}
-          <div ref={catalogRef} className="px-4 md:px-5 pt-10 md:pt-7">
+          <div className="px-4 md:px-5 pt-10 md:pt-7">
             {categories.map((category) => {
               const categoryProducts = products.filter(
                 (p) => p.category_id === category.id
@@ -479,13 +490,13 @@ export default function MenuClient({
       {/* Ekran ortasında bildirim */}
       {toast && (
         <div className="fixed inset-0 z-40 flex items-center justify-center px-6 pointer-events-none">
-          <div className="animate-toast-in flex items-center gap-3.5 bg-[#1E1811]/95 backdrop-blur-sm border border-[#C9A876]/40 rounded-2xl px-7 py-5 shadow-2xl">
+          <div className="animate-toast-in max-w-full flex items-center gap-3 sm:gap-3.5 bg-[#1E1811]/95 backdrop-blur-sm border border-[#C9A876]/40 rounded-2xl px-5 sm:px-7 py-4 sm:py-5 shadow-2xl">
             <span className="w-10 h-10 rounded-full bg-[#C9A876] text-[#1B2318] flex items-center justify-center shrink-0">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="w-5 h-5">
                 <path d="M5 12.5l4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </span>
-            <span className="font-[family-name:var(--font-display)] text-lg md:text-xl font-semibold text-[#F5EFE4] whitespace-nowrap">
+            <span className="font-[family-name:var(--font-display)] text-lg md:text-xl font-semibold text-[#F5EFE4] min-w-0">
               {toast}
             </span>
           </div>

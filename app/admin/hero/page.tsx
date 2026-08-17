@@ -1,22 +1,35 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import AdminHero from '@/components/AdminHero'
+import { useRestaurant } from '@/lib/restaurantContext'
+import AdminHero, { type HeroImage } from '@/components/AdminHero'
 
-export default async function HeroPage() {
-  const { data: restaurant } = await supabase
-    .from('restaurants')
-    .select('*')
-    .eq('slug', 'test-restoran')
-    .single()
+export default function HeroPage() {
+  const restaurant = useRestaurant()
+  const [images, setImages] = useState<HeroImage[] | null>(null)
 
-  if (!restaurant) {
-    return <div className="text-[#F5EFE4] p-8">Restoran bulunamadı.</div>
+  useEffect(() => {
+    let iptal = false
+
+    supabase
+      .from('hero_images')
+      .select('*')
+      .eq('restaurant_id', restaurant.id)
+      .order('sort_order', { ascending: true })
+      .then(({ data }) => {
+        if (iptal) return
+        setImages((data as HeroImage[]) || [])
+      })
+
+    return () => {
+      iptal = true
+    }
+  }, [restaurant.id])
+
+  if (!images) {
+    return <p className="text-[#8A7C68] text-sm">Yükleniyor…</p>
   }
 
-  const { data: heroImages } = await supabase
-    .from('hero_images')
-    .select('*')
-    .eq('restaurant_id', restaurant.id)
-    .order('sort_order', { ascending: true })
-
-  return <AdminHero restaurantId={restaurant.id} initialImages={heroImages || []} />
+  return <AdminHero restaurantId={restaurant.id} initialImages={images} />
 }

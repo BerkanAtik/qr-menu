@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
-export type ServiceRequest = {
+type ServiceRequest = {
   id: string
   status: string
   type: string
@@ -17,14 +17,10 @@ const TYPE_LABELS: Record<string, string> = {
   su: 'Su isteniyor',
 }
 
-export default function AdminServis({
-  restaurantId,
-  initialRequests,
-}: {
-  restaurantId: string
-  initialRequests: ServiceRequest[]
-}) {
-  const [requests, setRequests] = useState<ServiceRequest[]>(initialRequests)
+export default function AdminServis({ restaurantId }: { restaurantId: string }) {
+  // Liste sunucudan ön yüklenmiyor: RLS altında oturumsuz sunucu isteği boş
+  // döneceği için veriyi mount anında oturumlu client ile çekiyoruz.
+  const [requests, setRequests] = useState<ServiceRequest[]>([])
 
   async function refreshRequests() {
     const { data } = await supabase
@@ -37,8 +33,6 @@ export default function AdminServis({
   }
 
   useEffect(() => {
-    // RLS altında sunucu tarafındaki ilk yükleme (oturumsuz) boş dönebilir;
-    // tarayıcıdaki oturumlu client ile mount anında tazeliyoruz.
     // eslint-disable-next-line react-hooks/set-state-in-effect -- oturumlu ilk veri çekimi
     refreshRequests()
 
@@ -83,7 +77,7 @@ export default function AdminServis({
 
   return (
     <div>
-      <h1 className="font-[family-name:var(--font-display)] italic text-3xl text-[#F5EFE4] mb-8">
+      <h1 className="font-[family-name:var(--font-display)] italic text-2xl sm:text-3xl text-[#F5EFE4] mb-8">
         Servis Talepleri
       </h1>
 
@@ -95,10 +89,10 @@ export default function AdminServis({
         {pending.map((req) => (
           <div
             key={req.id}
-            className="flex items-center justify-between bg-[#1E1811] border border-[#2A2119] rounded-2xl px-5 py-4"
+            className="flex items-center justify-between gap-3 bg-[#1E1811] border border-[#2A2119] rounded-2xl px-4 sm:px-5 py-4"
           >
-            <div>
-              <div className="flex items-center gap-2.5">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2.5 flex-wrap">
                 <span className="font-[family-name:var(--font-mono)] text-base text-[#F5EFE4]">
                   Masa {req.tables?.table_no ?? '-'}
                 </span>
@@ -115,7 +109,7 @@ export default function AdminServis({
             </div>
             <button
               onClick={() => markHandled(req.id)}
-              className="font-[family-name:var(--font-mono)] text-sm px-4 py-2 bg-[#C9A876] text-[#1B2318] font-medium rounded-full hover:bg-[#d9bb8e] transition-colors"
+              className="shrink-0 font-[family-name:var(--font-mono)] text-sm px-4 py-2 bg-[#C9A876] text-[#1B2318] font-medium rounded-full hover:bg-[#d9bb8e] transition-colors"
             >
               Tamamlandı
             </button>
@@ -132,12 +126,12 @@ export default function AdminServis({
             {handled.map((req) => (
               <div
                 key={req.id}
-                className="flex items-center justify-between bg-[#1E1811] border border-[#2A2119] rounded-xl px-5 py-3 text-base"
+                className="flex items-center justify-between gap-3 bg-[#1E1811] border border-[#2A2119] rounded-xl px-4 sm:px-5 py-3 text-base"
               >
-                <span className="text-[#D8CBB8]">
+                <span className="text-[#D8CBB8] min-w-0">
                   Masa {req.tables?.table_no ?? '-'} · {TYPE_LABELS[req.type] || req.type}
                 </span>
-                <span className="text-sm px-2.5 py-1 rounded-full bg-[#3A2F24] text-[#8A7C68]">
+                <span className="shrink-0 text-sm px-2.5 py-1 rounded-full bg-[#3A2F24] text-[#8A7C68]">
                   Tamamlandı
                 </span>
               </div>

@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
+import { inputClass, labelClass } from '@/lib/adminUi'
 
-type Product = {
+export type Product = {
   id: string
   name: string
   description: string | null
@@ -15,16 +16,11 @@ type Product = {
   is_popular: boolean
 }
 
-type Category = {
+export type Category = {
   id: string
   name: string
   sort_order: number
 }
-
-const inputClass =
-  'w-full bg-[#231B14] border border-[#3A2F24] rounded-lg px-4 py-3 text-base text-[#F5EFE4] placeholder:text-[#8A7C68] outline-none focus:border-[#C9A876] transition-colors'
-const labelClass =
-  'block font-[family-name:var(--font-mono)] text-sm uppercase tracking-wider text-[#8A7C68] mb-2'
 
 function IconButton({
   onClick,
@@ -227,8 +223,8 @@ export default function AdminProducts({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="font-[family-name:var(--font-display)] italic text-3xl text-[#F5EFE4]">
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-8">
+        <h1 className="font-[family-name:var(--font-display)] italic text-2xl sm:text-3xl text-[#F5EFE4]">
           Ürünler
         </h1>
         {!formOpen && (
@@ -244,13 +240,13 @@ export default function AdminProducts({
       {formOpen && (
         <form
           onSubmit={editingId ? handleUpdate : handleAdd}
-          className="bg-[#1E1811] border border-[#2A2119] rounded-2xl p-6 mb-8"
+          className="bg-[#1E1811] border border-[#2A2119] rounded-2xl p-4 sm:p-6 mb-8"
         >
           <h2 className="font-[family-name:var(--font-display)] text-xl text-[#F5EFE4] mb-5">
             {editingId ? 'Ürünü düzenle' : 'Yeni ürün ekle'}
           </h2>
 
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
               <label className={labelClass}>Ürün adı</label>
               <input
@@ -302,14 +298,14 @@ export default function AdminProducts({
 
           <div className="mb-5">
             <label className={labelClass}>Ürün görseli (opsiyonel)</label>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               {form.imageUrl && (
                 <Image
                   src={form.imageUrl}
                   alt="Ürün görseli"
                   width={64}
                   height={64}
-                  className="w-16 h-16 object-cover rounded-lg border border-[#3A2F24]"
+                  className="w-16 h-16 object-cover rounded-lg border border-[#3A2F24] shrink-0"
                 />
               )}
               <input
@@ -317,7 +313,7 @@ export default function AdminProducts({
                 accept="image/*"
                 onChange={handleImageChange}
                 disabled={uploading}
-                className="text-sm text-[#8A7C68] file:mr-3 file:py-2 file:px-4 file:rounded-full file:border file:border-[#3A2F24] file:bg-[#231B14] file:text-[#C9A876] file:text-sm"
+                className="min-w-0 max-w-full text-sm text-[#8A7C68] file:mr-3 file:py-2 file:px-4 file:rounded-full file:border file:border-[#3A2F24] file:bg-[#231B14] file:text-[#C9A876] file:text-sm"
               />
               {uploading && <span className="text-sm text-[#8A7C68]">Yükleniyor…</span>}
             </div>
@@ -363,8 +359,11 @@ export default function AdminProducts({
 
             <div className="bg-[#1E1811] border border-[#2A2119] rounded-2xl divide-y divide-[#2A2119]">
               {categoryProducts.map((product) => (
-                <div key={product.id} className="flex items-center justify-between px-5 py-4 gap-4">
-                  <div className="flex items-center gap-4 min-w-0">
+                <div
+                  key={product.id}
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-4 gap-3 sm:gap-4"
+                >
+                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                     {product.image_url ? (
                       <Image
                         src={product.image_url}
@@ -405,7 +404,7 @@ export default function AdminProducts({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
                     <IconButton
                       onClick={() => togglePopular(product)}
                       active={product.is_popular}

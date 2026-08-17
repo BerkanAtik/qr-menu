@@ -20,8 +20,8 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "QR Menü",
-  description: "Dijital menü ve sipariş sistemi",
+  title: "Kapmenü",
+  description: "Restoranlar için QR kodlu dijital menü sistemi",
 };
 
 export default function RootLayout({
