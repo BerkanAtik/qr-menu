@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, IBM_Plex_Mono, Inter } from "next/font/google";
 import "./globals.css";
 
@@ -22,6 +22,15 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "Kapmenü",
   description: "Restoranlar için QR kodlu dijital menü sistemi",
+};
+
+export const viewport: Viewport = {
+  // viewportFit: iPhone'da çentik/home indicator bölgesi de sayfaya dahil olur;
+  // sabit konumlu öğeler env(safe-area-inset-*) ile o bölgeden uzak tutuluyor.
+  // Yakınlaştırma bilerek kısıtlanmadı: müşteri menüde fiyat okurken
+  // parmakla büyütebilmeli.
+  viewportFit: "cover",
+  themeColor: "#14100C",
 };
 
 export default function RootLayout({

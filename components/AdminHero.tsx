@@ -28,7 +28,10 @@ export default function AdminHero({
     const ext = file.name.includes('.')
       ? file.name.split('.').pop()!.toLowerCase().replace(/[^a-z0-9]/g, '')
       : 'jpg'
-    const path = `hero/${restaurantId}/${Date.now()}-${crypto.randomUUID()}.${ext || 'jpg'}`
+    // Yolun İLK klasörü restaurant_id olmak zorunda: storage politikası
+    // (005) bu klasörü uuid'ye çevirip is_restaurant_admin ile kontrol ediyor.
+    // "hero/<restaurant_id>/..." sırası yüklemeyi tamamen engelliyordu.
+    const path = `${restaurantId}/hero/${Date.now()}-${crypto.randomUUID()}.${ext || 'jpg'}`
     const { error: uploadError } = await supabase.storage.from('menu-images').upload(path, file)
 
     if (uploadError) {

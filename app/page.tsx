@@ -15,7 +15,7 @@ const BACKGROUND_URL =
 const PAKETLER = [
   {
     ad: 'Başlangıç',
-    fiyat: '4.900',
+    fiyat: '3.000',
     aciklama: 'Menüsünü dijitale taşımak isteyen küçük işletmeler için.',
     oneCikan: false,
     ozellikler: [
@@ -31,7 +31,7 @@ const PAKETLER = [
   },
   {
     ad: 'Profesyonel',
-    fiyat: '7.900',
+    fiyat: '4.000',
     aciklama: 'Masa servisi veren restoran ve kafeler için en çok tercih edilen paket.',
     oneCikan: true,
     ozellikler: [
@@ -47,7 +47,7 @@ const PAKETLER = [
   },
   {
     ad: 'Kurumsal',
-    fiyat: '10.900',
+    fiyat: '5.000',
     aciklama: 'Turist yoğunluğu olan ve paket servis yapan işletmeler için.',
     oneCikan: false,
     ozellikler: [
@@ -239,7 +239,9 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="ozellikler" className="grid grid-cols-1 md:grid-cols-2 gap-5 py-16 scroll-mt-20">
+        {/* scroll-mt: sabit header'ın yüksekliği kadar (mobil ~64px, masaüstü
+            ~104px) — yoksa tıklanan bölümün başlığı header'ın altında kalıyor. */}
+        <section id="ozellikler" className="grid grid-cols-1 md:grid-cols-2 gap-5 py-16 scroll-mt-20 md:scroll-mt-28">
           {OZELLIKLER.map((ozellik) => (
             <div
               key={ozellik.baslik}
@@ -253,7 +255,7 @@ export default function Home() {
           ))}
         </section>
 
-        <section id="paketler" className="pb-16 scroll-mt-6">
+        <section id="paketler" className="pb-16 scroll-mt-20 md:scroll-mt-28">
           <div className="text-center mb-10">
             <h2 className="font-[family-name:var(--font-display)] text-2xl md:text-3xl mb-3">
               Paketler
@@ -337,7 +339,7 @@ export default function Home() {
           </p>
         </section>
 
-        <section id="surec" className="pb-20 scroll-mt-20">
+        <section id="surec" className="pb-20 scroll-mt-20 md:scroll-mt-28">
           <div className="bg-[#1E1811] border border-[#2A2119] rounded-2xl p-5 sm:p-8 md:p-10">
             <h2 className="font-[family-name:var(--font-display)] text-2xl mb-6">Nasıl çalışır?</h2>
             <ol className="space-y-5">

@@ -21,15 +21,27 @@ export default function AdminServis({ restaurantId }: { restaurantId: string }) 
   // Liste sunucudan ön yüklenmiyor: RLS altında oturumsuz sunucu isteği boş
   // döneceği için veriyi mount anında oturumlu client ile çekiyoruz.
   const [requests, setRequests] = useState<ServiceRequest[]>([])
+  // Liste gelmeden "Bekleyen servis talebi yok." yazılırsa personel gerçek bir
+  // çağrıyı kaçırabilir; o yüzden ilk yükleme ayrı bir durumda tutuluyor.
+  const [yukleniyor, setYukleniyor] = useState(true)
+  const [hata, setHata] = useState<string | null>(null)
 
   async function refreshRequests() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('service_requests')
       .select('*, tables(table_no)')
       .eq('restaurant_id', restaurantId)
       .order('created_at', { ascending: false })
 
-    if (data) setRequests(data as unknown as ServiceRequest[])
+    setYukleniyor(false)
+
+    if (error) {
+      setHata('Talepler okunamadı: ' + error.message)
+      return
+    }
+
+    setHata(null)
+    setRequests((data ?? []) as unknown as ServiceRequest[])
   }
 
   useEffect(() => {
@@ -81,8 +93,13 @@ export default function AdminServis({ restaurantId }: { restaurantId: string }) 
         Servis Talepleri
       </h1>
 
-      {pending.length === 0 && (
-        <p className="text-[#8A7C68] text-base mb-8">Bekleyen servis talebi yok.</p>
+      {hata && <p className="text-red-400 text-base mb-8">{hata}</p>}
+
+      {yukleniyor ? (
+        <p className="text-[#8A7C68] text-base mb-8">Talepler yükleniyor…</p>
+      ) : (
+        pending.length === 0 &&
+        !hata && <p className="text-[#8A7C68] text-base mb-8">Bekleyen servis talebi yok.</p>
       )}
 
       <div className="space-y-3.5 mb-10">

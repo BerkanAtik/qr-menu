@@ -220,7 +220,14 @@ export default function MenuClient({
     : null
 
   return (
-    <div className="min-h-screen w-full max-w-full bg-[#14100C] pb-24">
+    <div
+      className="min-h-screen w-full max-w-full bg-[#14100C] pb-[calc(6rem+env(safe-area-inset-bottom))]"
+      style={{
+        // Telefon yatay tutulduğunda çentik içeriği kesmesin.
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)',
+      }}
+    >
       <div className="max-w-md md:max-w-3xl lg:max-w-[1440px] mx-auto lg:px-10 xl:px-16">
       {/* Header (mobil): logo üstte ortada, rozetler altında yan yana */}
       <div className="md:hidden px-5 pt-6 pb-5">
@@ -354,7 +361,9 @@ export default function MenuClient({
         </div>
       )}
 
-      {/* Search */}
+      {/* Search — arama kutusunun yazısı mobilde 16px olmalı: iOS Safari daha
+          küçük yazılı bir input'a odaklanınca sayfayı otomatik yakınlaştırıyor
+          ve müşteri elle geri uzaklaştırmak zorunda kalıyor. */}
       <div className="px-5 mb-5">
         <div className="flex items-center gap-2 bg-[#1E1811] border border-[#3A2F24] rounded-full px-4 py-3">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 text-[#8A7C68] shrink-0">
@@ -366,7 +375,7 @@ export default function MenuClient({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Yemek veya içecek ara…"
-            className="bg-transparent outline-none text-sm text-[#F5EFE4] placeholder:text-[#8A7C68] w-full"
+            className="bg-transparent outline-none text-base md:text-sm text-[#F5EFE4] placeholder:text-[#8A7C68] w-full"
           />
         </div>
       </div>
@@ -504,7 +513,7 @@ export default function MenuClient({
       )}
 
       {/* Sabit garson çağırma butonu — mobilde ortada, webde sağda (köşeye yapışık değil) */}
-      <div className="fixed bottom-5 md:bottom-8 left-1/2 -translate-x-1/2 md:left-auto md:right-24 md:translate-x-0 z-30">
+      <div className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] md:bottom-[calc(2rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 md:left-auto md:right-24 md:translate-x-0 z-30">
         {/* Dışa yayılan altın halkalar */}
         {pulsing && (
           <span className="absolute inset-0 pointer-events-none">

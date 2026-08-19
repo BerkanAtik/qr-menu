@@ -66,7 +66,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, [session])
 
-  if (pathname === '/admin/login') {
+  // Her iki çerçeve dışı sayfa da kendi tam ekran tasarımıyla çalışır. Yalnızca
+  // login'i muaf tutmak, süresi dolmuş bir şifre linkinde (oturum yokken)
+  // aşağıdaki "!session -> null" dalına düşüp bomboş sayfa gösteriyordu.
+  if (cerceveDisi) {
     return <>{children}</>
   }
 

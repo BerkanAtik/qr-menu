@@ -67,6 +67,8 @@ export default function AdminProducts({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [uploading, setUploading] = useState(false)
+  // Kaydet'e iki kez basınca aynı ürünün iki kez eklenmesini engeller.
+  const [kaydediliyor, setKaydediliyor] = useState(false)
 
   const [form, setForm] = useState({
     name: '',
@@ -110,10 +112,16 @@ export default function AdminProducts({
     const { data } = supabase.storage.from('menu-images').getPublicUrl(path)
     setForm((prev) => ({ ...prev, imageUrl: data.publicUrl }))
     setUploading(false)
+    // Seçim sıfırlanmazsa form kapandıktan sonra da eski dosya adı görünüyor ve
+    // aynı dosya ikinci kez seçildiğinde onChange hiç tetiklenmiyor.
+    e.target.value = ''
   }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
+    if (kaydediliyor) return
+
+    setKaydediliyor(true)
     const { data, error } = await supabase
       .from('products')
       .insert({
@@ -128,6 +136,7 @@ export default function AdminProducts({
       })
       .select()
       .single()
+    setKaydediliyor(false)
 
     if (error) {
       alert('Ürün eklenemedi: ' + error.message)
@@ -153,8 +162,9 @@ export default function AdminProducts({
 
   async function handleUpdate(e: React.FormEvent) {
     e.preventDefault()
-    if (!editingId) return
+    if (!editingId || kaydediliyor) return
 
+    setKaydediliyor(true)
     const { data, error } = await supabase
       .from('products')
       .update({
@@ -168,6 +178,7 @@ export default function AdminProducts({
       .eq('id', editingId)
       .select()
       .single()
+    setKaydediliyor(false)
 
     if (error) {
       alert('Ürün güncellenemedi: ' + error.message)
@@ -332,9 +343,10 @@ export default function AdminProducts({
           <div className="flex gap-3">
             <button
               type="submit"
-              className="font-[family-name:var(--font-mono)] text-base px-5 py-2.5 bg-[#C9A876] text-[#1B2318] font-medium rounded-full hover:bg-[#d9bb8e] transition-colors"
+              disabled={kaydediliyor || uploading}
+              className="font-[family-name:var(--font-mono)] text-base px-5 py-2.5 bg-[#C9A876] text-[#1B2318] font-medium rounded-full hover:bg-[#d9bb8e] transition-colors disabled:opacity-60"
             >
-              {editingId ? 'Güncelle' : 'Ekle'}
+              {kaydediliyor ? 'Kaydediliyor…' : editingId ? 'Güncelle' : 'Ekle'}
             </button>
             <button
               type="button"
