@@ -15,10 +15,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter()
   const pathname = usePathname()
 
-  // Bu iki sayfa oturum şartı olmadan (ya da geçici bir "recovery" oturumuyla)
-  // kendi başına çalışır; panel çerçevesi ve giriş yönlendirmesi bunları
-  // kapsamaz.
-  const cerceveDisi = pathname === '/admin/login' || pathname === '/admin/sifre-sifirla'
+  // Login sayfası oturum şartı olmadan kendi başına çalışır; panel çerçevesi
+  // ve giriş yönlendirmesi bunu kapsamaz.
+  const cerceveDisi = pathname === '/admin/login'
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -66,9 +65,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, [session])
 
-  // Her iki çerçeve dışı sayfa da kendi tam ekran tasarımıyla çalışır. Yalnızca
-  // login'i muaf tutmak, süresi dolmuş bir şifre linkinde (oturum yokken)
-  // aşağıdaki "!session -> null" dalına düşüp bomboş sayfa gösteriyordu.
   if (cerceveDisi) {
     return <>{children}</>
   }
